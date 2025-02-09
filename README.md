@@ -1,47 +1,127 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/GoogleCloudPlatform/cloud-foundation-fabric/master/assets/logos/fabric-logo-colors-gray-800.png?v1">
-    <img src="https://raw.githubusercontent.com/GoogleCloudPlatform/cloud-foundation-fabric/master/assets/logos/fabric-logo-colors-800.png?v1" alt="Cloud Foundation Fabric">
-  </picture>
-</p>
+# Terraform modules suite for Google Cloud
 
-# Terraform Examples and Modules for Google Cloud
+The modules collected in this folder are designed as a suite: they are meant to be composed together, and are designed to be forked and modified where use of third party code and sources is not allowed.
 
-This repository provides **end-to-end blueprints** and a **suite of Terraform modules** for Google Cloud, which support different use cases:
+Modules try to stay close to the low level provider resources they encapsulate, and they all share a similar interface that combines management of one resource or set or resources, and the corresponding IAM bindings.
 
-- organization-wide [landing zone blueprint](fast/) used to bootstrap real-world cloud foundations
-- reference [blueprints](./blueprints/) used to deep dive into network patterns or product features
-- a comprehensive source of lean [modules](./modules/) that lend themselves well to changes
+Authoritative IAM bindings are primarily used (e.g. `google_storage_bucket_iam_binding` for GCS buckets) so that each module is authoritative for specific roles on the resources it manages, and can neutralize or reconcile IAM changes made elsewhere.
 
-The whole repository is meant to be cloned as a single unit, and then forked into separate owned repositories to seed production usage, or used as-is and periodically updated as a complete toolkit for prototyping. You can read more on this approach in our [contributing guide](./CONTRIBUTING.md), and a comparison against similar toolkits [here](./FABRIC-AND-CFT.md).
+Specific modules also offer support for non-authoritative bindings (e.g. `google_storage_bucket_iam_member` for service accounts), to allow granular permission management on resources that they don't manage directly.
 
-## Organization blueprint (Fabric FAST)
+These modules are not necessarily backward compatible. Changes breaking compatibility in modules are marked by major releases (but not all major releases contain breaking changes). Please be mindful when upgrading Fabric modules in existing Terraform setups, and always try to use versioned references in module sources so you can easily revert back to a previous version. Since the introduction of the `moved` block in Terraform we try to use it whenever possible to make updates non-breaking, but that does not cover all changes we might need to make.
 
-Setting up a production-ready GCP organization is often a time-consuming process. Fabric [FAST](fast/) aims to speed up this process via two complementary goals. On the one hand, FAST provides a design of a GCP organization that includes the typical elements required by enterprise customers. Secondly, we provide a reference implementation of the FAST design using Terraform.
+These modules are used in the examples included in this repository. If you are using any of those examples in your own Terraform configuration, make sure that you are using the same version for all the modules, and switch module sources to GitHub format using references. The recommended approach to working with Fabric modules is the following:
 
-## Modules
+- Fork the repository and own the fork. This will allow you to:
+  - Evolve the existing modules.
+  - Create your own modules.
+  - Sync from the upstream repository to get all the updates.
 
-The suite of modules in this repository is designed for rapid composition and reuse, and to be reasonably simple and readable so that they can be forked and changed where the use of third-party code and sources is not allowed.
+- Use GitHub sources with refs to reference the modules. See an example below:
 
-All modules share a similar interface where each module tries to stay close to the underlying provider resources, support IAM together with resource creation and modification, offer the option of creating multiple resources where it makes sense (eg not for projects), and be completely free of side-effects (eg no external commands).
+    ```terraform
+    module "project" {
+        source              = "github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/project?ref=v35.0.0&depth=1"
+        name                = "my-project"
+        billing_account     = "123456-123456-123456"
+        parent              = "organizations/123456"
+    }
+    ```
 
-The current list of modules supports most of the core foundational and networking components used to design end-to-end infrastructure, with more modules in active development for specialized compute, security, and data scenarios.
+## Foundational modules
 
-Currently available modules:
+- [Billing account](./billing-account)
+- [Cloud Identity group](./cloud-identity-group/)
+- [Folder](./folder)
+- [Service accounts](./iam-service-account)
+- [Logging bucket](./logging-bucket)
+- [Organization](./organization)
+- [Project](./project)
+- [Projects (data source)](./projects-data-source)
 
-- **foundational** - [billing account](./modules/billing-account), [Cloud Identity group](./modules/cloud-identity-group/), [folder](./modules/folder), [service accounts](./modules/iam-service-account), [logging bucket](./modules/logging-bucket), [organization](./modules/organization), [project](./modules/project), [projects-data-source](./modules/projects-data-source)
-- **process factories** - [project factory](./modules/project-factory/README.md)
-- **networking** - [DNS](./modules/dns), [DNS Response Policy](./modules/dns-response-policy/), [Cloud Endpoints](./modules/endpoints), [address reservation](./modules/net-address), [NAT](./modules/net-cloudnat), [VLAN Attachment](./modules/net-vlan-attachment/), [External Application LB](./modules/net-lb-app-ext/), [External Passthrough Network LB](./modules/net-lb-ext), [External Regional Application Load Balancer](./modules/net-lb-app-ext-regional/), [Firewall policy](./modules/net-firewall-policy), [Internal Application LB](./modules/net-lb-app-int), [Cross-region Internal Application LB](./modules/net-lb-app-int-cross-region), [Internal Passthrough Network LB](./modules/net-lb-int), [Internal Proxy Network LB](./modules/net-lb-proxy-int), [IPSec over Interconnect](./modules/net-ipsec-over-interconnect), [VPC](./modules/net-vpc), [VPC firewall](./modules/net-vpc-firewall), [VPC peering](./modules/net-vpc-peering), [VPN dynamic](./modules/net-vpn-dynamic), [HA VPN](./modules/net-vpn-ha), [VPN static](./modules/net-vpn-static), [Service Directory](./modules/service-directory), [Secure Web Proxy](./modules/net-swp)
-- **compute** - [VM/VM group](./modules/compute-vm), [MIG](./modules/compute-mig), [COS container](./modules/cloud-config-container/cos-generic-metadata/) (coredns, mysql, onprem, squid), [GKE cluster](./modules/gke-cluster-standard), [GKE hub](./modules/gke-hub), [GKE nodepool](./modules/gke-nodepool), [GCVE private cloud](./modules/gcve-private-cloud)
-- **data** - [AlloyDB instance](./modules/alloydb), [Analytics Hub](./modules/analytics-hub), [BigQuery dataset](./modules/bigquery-dataset), [Biglake Catalog](./modules/biglake-catalog), [Bigtable instance](./modules/bigtable-instance), [Dataplex](./modules/dataplex), [Dataplex DataScan](./modules/dataplex-datascan), [Cloud SQL instance](./modules/cloudsql-instance), [Spanner instance](./modules/spanner-instance), [Firestore](./modules/firestore), [Data Catalog Policy Tag](./modules/data-catalog-policy-tag), [Data Catalog Tag](./modules/data-catalog-tag), [Data Catalog Tag Template](./modules/data-catalog-tag-template), [Datafusion](./modules/datafusion), [Dataproc](./modules/dataproc), [GCS](./modules/gcs), [Pub/Sub](./modules/pubsub), [Dataform Repository](./modules/dataform-repository/), [Looker Core](./modules/looker-core)
-- **development** - [API Gateway](./modules/api-gateway), [Apigee](./modules/apigee), [Artifact Registry](./modules/artifact-registry), [Container Registry](./modules/container-registry), [Cloud Source Repository](./modules/source-repository), [Secure Source Manager instance](./modules/secure-source-manager-instance), [Workstation cluster](./modules/workstation-cluster)
-- **security** - [Binauthz](./modules/binauthz/), [Certificate Authority Service (CAS)](./modules/certificate-authority-service), [KMS](./modules/kms), [SecretManager](./modules/secret-manager), [VPC Service Control](./modules/vpc-sc), [Certificate Manager](./modules/certificate-manager/)
-- **serverless** - [Cloud Function v1](./modules/cloud-function-v1), [Cloud Function v2](./modules/cloud-function-v2), [Cloud Run](./modules/cloud-run), [Cloud Run v2](./modules/cloud-run-v2)
+## Process factories
 
-For more information and usage examples see each module's README file.
+- [Project factory](./project-factory/)
 
-## End-to-end blueprints
+## Networking modules
 
-The [blueprints](./blueprints/) in this repository are split into several main sections: **[networking blueprints](./blueprints/networking/)** that implement core patterns or features, **[data solutions blueprints](./blueprints/data-solutions/)** that demonstrate how to integrate data services in complete scenarios, **[cloud operations blueprints](./blueprints/cloud-operations/)** that leverage specific products to meet specific operational needs, and **[factories](./blueprints/factories/)** that implement resource factories for the repetitive creation of specific resources, and finally **[GKE](./blueprints/gke)**, **[serverless](./blueprints/serverless)**, and **[third-party solutions](./blueprints/third-party-solutions/)** design blueprints.
+- [Address reservation](./net-address)
+- [Cloud Endpoints](./endpoints)
+- [DNS](./dns)
+- [DNS Response Policy](./dns-response-policy/)
+- [Firewall policy](./net-firewall-policy)
+- [External Application Load Balancer](./net-lb-app-ext/)
+- [External Passthrough Network Load Balancer](./net-lb-ext)
+- [External Regional Application Load Balancer](./net-lb-app-ext-regional/)
+- [Internal Application Load Balancer](./net-lb-app-int)
+- [Cross-region Internal Application Load Balancer](./net-lb-app-int-cross-region)
+- [Internal Passthrough Network Load Balancer](./net-lb-int)
+- [Internal Proxy Network Load Balancer](./net-lb-proxy-int)
+- [NAT](./net-cloudnat)
+- [Service Directory](./service-directory)
+- [VPC](./net-vpc)
+- [VPC firewall](./net-vpc-firewall)
+- [VPN dynamic](./net-vpn-dynamic)
+- [VPC peering](./net-vpc-peering)
+- [VPN HA](./net-vpn-ha)
+- [VPN static](./net-vpn-static)
 
-<!-- $Id$ -->
+## Compute/Container
+
+- [VM/VM group](./compute-vm)
+- [MIG](./compute-mig)
+- [COS container](./cloud-config-container/cos-generic-metadata/) (coredns/mysql/nva/onprem/squid)
+- [GKE autopilot cluster](./gke-cluster-autopilot)
+- [GKE standard cluster](./gke-cluster-standard)
+- [GKE hub](./gke-hub)
+- [GKE nodepool](./gke-nodepool)
+- [GCVE private cloud](./gcve-private-cloud)
+
+## Data
+
+- [AlloyDB](./alloydb)
+- [Analytics Hub](./analytics-hub)
+- [BigQuery dataset](./bigquery-dataset)
+- [Bigtable instance](./bigtable-instance)
+- [Biglake catalog](./biglake-catalog)
+- [Cloud SQL instance](./cloudsql-instance)
+- [Data Catalog Policy Tag](./data-catalog-policy-tag)
+- [Data Catalog Tag](./data-catalog-tag)
+- [Data Catalog Tag Template](./data-catalog-tag-template)
+- [Dataform Repository](./dataform-repository/)
+- [Datafusion](./datafusion)
+- [Dataplex](./dataplex)
+- [Dataplex DataScan](./dataplex-datascan/)
+- [Dataproc](./dataproc)
+- [Firestore](./firestore)
+- [GCS](./gcs)
+- [Looker Core](./looker-core)
+- [Pub/Sub](./pubsub)
+- [Spanner instance](./spanner-instance)
+
+## Development
+
+- [API Gateway](./api-gateway)
+- [Apigee](./apigee)
+- [Artifact Registry](./artifact-registry)
+- [Container Registry](./container-registry)
+- [Cloud Source Repository](./source-repository)
+- [Secure Source Manager instance](./secure-source-manager-instance)
+- [Workstation cluster](./workstation-cluster)
+
+## Security
+
+- [Binauthz](./binauthz/)
+- [Certificate Authority Service (CAS)](./certificate-authority-service)
+- [KMS](./kms)
+- [SecretManager](./secret-manager)
+- [VPC Service Control](./vpc-sc)
+- [Secure Web Proxy](./net-swp)
+- [Certificate Manager](./certificate-manager)
+
+## Serverless
+
+- [Cloud Functions v1](./cloud-function-v1)
+- [Cloud Functions v2](./cloud-function-v2)
+- [Cloud Run](./cloud-run)
+- [Cloud Run v2](./cloud-run-v2)
